@@ -1,12 +1,18 @@
 'use client';
 import { useState } from 'react';
-import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/api';
 import { setToken } from '@/lib/auth';
 import Link from 'next/link';
 
-export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
+export default function RegisterPage() {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    department: '',
+    role: 'employee'
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -17,17 +23,17 @@ export default function Login() {
     setError('');
 
     try {
-      const res = await api.post('/auth/login', form);
+      const res = await api.post('/auth/register', form);
       setToken(res.data.token);
       
       // Redirect based on role
-      if (res.data.user.role === 'admin') {
+      if (res.data.role === 'admin') {
         router.push('/admin/dashboard');
       } else {
         router.push('/employee/dashboard');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -35,10 +41,10 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
+      <div className="max-w-md w-full p-8 space-y-8 bg-white rounded-lg shadow">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
-          <p className="mt-2 text-gray-600">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-gray-900">Create an Account</h1>
+          <p className="mt-2 text-gray-600">Fill in your details to register</p>
         </div>
 
         {error && (
@@ -49,6 +55,21 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div className="space-y-4">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                Full Name
+              </label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                value={form.name}
+                onChange={(e) => setForm({...form, name: e.target.value})}
+              />
+            </div>
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email
@@ -73,12 +94,43 @@ export default function Login() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 value={form.password}
                 onChange={(e) => setForm({...form, password: e.target.value})}
               />
+            </div>
+
+            <div>
+              <label htmlFor="department" className="block text-sm font-medium text-gray-700">
+                Department
+              </label>
+              <input
+                id="department"
+                name="department"
+                type="text"
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                value={form.department}
+                onChange={(e) => setForm({...form, department: e.target.value})}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                Role
+              </label>
+              <select
+                id="role"
+                name="role"
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                value={form.role}
+                onChange={(e) => setForm({...form, role: e.target.value})}
+              >
+                <option value="employee">Employee</option>
+                <option value="admin">Admin</option>
+              </select>
             </div>
           </div>
 
@@ -90,15 +142,15 @@ export default function Login() {
                 loading ? 'opacity-70 cursor-not-allowed' : ''
               }`}
             >
-              {loading ? 'Signing in...' : 'Sign in'}
+              {loading ? 'Registering...' : 'Register'}
             </button>
           </div>
         </form>
 
         <div className="text-center text-sm text-gray-600">
-          Don't have an account?{' '}
-          <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
-            Register here
+          Already have an account?{' '}
+          <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            Sign in
           </Link>
         </div>
       </div>

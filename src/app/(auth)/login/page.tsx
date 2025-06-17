@@ -1,12 +1,13 @@
 'use client';
 import { useState } from 'react';
-import api from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import api from '@/lib/api';
 import { setToken } from '@/lib/auth';
 import Link from 'next/link';
 
-export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -17,11 +18,11 @@ export default function Login() {
     setError('');
 
     try {
-      const res = await api.post('/auth/login', form);
+      const res = await api.post('/auth/login', { email, password });
       setToken(res.data.token);
       
       // Redirect based on role
-      if (res.data.user.role === 'admin') {
+      if (res.data.role === 'admin') {
         router.push('/admin/dashboard');
       } else {
         router.push('/employee/dashboard');
@@ -35,7 +36,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow-md">
+      <div className="max-w-md w-full p-8 space-y-8 bg-white rounded-lg shadow">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">Welcome Back</h1>
           <p className="mt-2 text-gray-600">Sign in to your account</p>
@@ -60,8 +61,8 @@ export default function Login() {
                 autoComplete="email"
                 required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                value={form.email}
-                onChange={(e) => setForm({...form, email: e.target.value})}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
@@ -76,8 +77,8 @@ export default function Login() {
                 autoComplete="current-password"
                 required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                value={form.password}
-                onChange={(e) => setForm({...form, password: e.target.value})}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
           </div>
