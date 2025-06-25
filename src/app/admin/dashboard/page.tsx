@@ -14,7 +14,7 @@ export default function AdminDashboard() {
 
   const fetchEmployeeCount = async () => {
     try {
-      const res = await api.get('/users/count?role=employee'); // Make sure your backend supports this route
+      const res = await api.get('/users/count?role=employee');
       setEmployeeCount(res.data.count);
     } catch (err) {
       console.error('Error fetching employee count:', err);
@@ -43,13 +43,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Navigate to Announcements */}
-        <button
-          onClick={() => router.push('/admin/announcement')}
-          className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition"
-        >
-          Go to Announcement Section
-        </button>
 
         <div className="bg-white p-6 rounded-lg shadow mt-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>

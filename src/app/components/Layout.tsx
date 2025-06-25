@@ -5,28 +5,31 @@ import { useRouter } from 'next/navigation';
 import Navbar from './Navbar';
 import { getUserFromToken } from '@/lib/auth';
 
-export default function Layout({
-  children,
-  allowedRoles,
-}: {
+interface LayoutProps {
   children: React.ReactNode;
   allowedRoles?: string[];
-}) {
+}
+
+export default function Layout({ children, allowedRoles }: LayoutProps) {
+  const [user, setUser] = useState<any>(null);
   const [isReady, setIsReady] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const user = getUserFromToken();
-    if (!user) {
+    const currentUser = getUserFromToken();
+
+    if (!currentUser) {
       router.push('/login');
       return;
     }
 
-    if (allowedRoles && !allowedRoles.includes(user.role)) {
-      router.push(user.role === 'admin' ? '/admin/dashboard' : '/employee/dashboard');
+    // If allowedRoles is defined and user role not in allowedRoles, redirect
+    if (allowedRoles && !allowedRoles.includes(currentUser.role)) {
+      router.push(currentUser.role === 'admin' ? '/admin/dashboard' : '/employee/dashboard');
       return;
     }
 
+    setUser(currentUser);
     setIsReady(true);
   }, [router, allowedRoles]);
 
@@ -46,9 +49,7 @@ export default function Layout({
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        {children}
-      </main>
+      <main className="container mx-auto px-4 py-8">{children}</main>
     </div>
   );
 }

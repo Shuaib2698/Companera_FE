@@ -16,12 +16,14 @@ export default function Navbar() {
   return (
     <nav className="bg-white shadow">
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <div className="flex space-x-8">
-          <Link href={user?.role === 'admin' ? '/admin/dashboard' : '/employee/dashboard'} 
-                className="text-xl font-bold text-blue-600">
+        <div className="flex space-x-8 items-center">
+          <Link
+            href={user?.role === 'admin' ? '/admin/dashboard' : '/employee/dashboard'}
+            className="text-xl font-bold text-blue-600"
+          >
             Company CMS
           </Link>
-          
+
           {user?.role === 'employee' && (
             <div className="hidden md:flex items-center space-x-6">
               <Link href="/employee/dashboard" className="text-gray-700 hover:text-blue-600">
@@ -32,6 +34,20 @@ export default function Navbar() {
               </Link>
               <Link href="/employee/attendance" className="text-gray-700 hover:text-blue-600">
                 Attendance
+              </Link>
+              <Link href="/employee/announcement" className="text-gray-700 hover:text-blue-600">
+                Announcements
+              </Link>
+            </div>
+          )}
+
+          {user?.role === 'admin' && (
+            <div className="hidden md:flex items-center space-x-6">
+              <Link href="/admin/dashboard" className="text-gray-700 hover:text-blue-600">
+                Dashboard
+              </Link>
+              <Link href="/admin/announcement" className="text-gray-700 hover:text-blue-600">
+                Announcements
               </Link>
             </div>
           )}
