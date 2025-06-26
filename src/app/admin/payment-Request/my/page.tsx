@@ -2,10 +2,10 @@
 
 import Layout from '@/app/components/Layout';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import api from '@/lib/api';
 import StatusBadge from '@/app/components/StatusBadge';
 import RequestModal from '@/app/components/RequestModal';
+import Link from 'next/link';
 
 interface Request {
   _id: string;
@@ -20,31 +20,32 @@ interface Request {
   documentUrl: string;
 }
 
-export default function EmployeePaymentRequests() {
+export default function AdminMyRequests() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [selected, setSelected] = useState<Request | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchRequests = async () => {
+    try {
+      const res = await api.get('/payment-Request/my-requests');
+      setRequests(res.data);
+    } catch (err) {
+      console.error('Failed to fetch requests', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        const res = await api.get('/payment-Request/my-requests');
-        setRequests(res.data);
-      } catch (err) {
-        console.error('Failed to fetch requests', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchRequests();
   }, []);
 
   return (
-    <Layout allowedRoles={['employee']}>
+    <Layout allowedRoles={['admin']}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Payment Requests</h1>
+        <h1 className="text-2xl font-bold">My Submitted Requests</h1>
         <Link
-          href="/employee/payment-Request/create"
+          href="/admin/payment-Request/create"
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
           New Request
@@ -91,7 +92,7 @@ export default function EmployeePaymentRequests() {
         <RequestModal
           request={selected}
           onClose={() => setSelected(null)}
-          isAdmin={false}
+          isAdmin={false} // Admin can't act on their own requests
         />
       )}
     </Layout>
