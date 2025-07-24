@@ -1,5 +1,4 @@
 'use client';
-
 import Layout from '@/app/components/Layout';
 import api from '@/lib/api';
 import { useState, useEffect } from 'react';
@@ -14,28 +13,14 @@ interface AttendanceRecord {
 
 export default function AttendancePage() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
-        const currentDate = new Date();
-        const month = currentDate.getMonth() + 1;
-        const year = currentDate.getFullYear();
-        
-        const [allRecords, monthlyRecords] = await Promise.all([
-          api.get('/attendance/my-attendance'),
-          api.get(`/attendance/my-attendance?month=${month}&year=${year}`)
-        ]);
-
-        setRecords(allRecords.data);
-        
-        const today = monthlyRecords.data.find((r: any) => 
-          new Date(r.date).toDateString() === currentDate.toDateString()
-        );
-        setTodayRecord(today || null);
+        const res = await api.get('/attendance/my-attendance');
+        setRecords(res.data);
       } catch (err: any) {
         setError(err.response?.data?.message || 'Error fetching attendance');
       } finally {
@@ -46,28 +31,10 @@ export default function AttendancePage() {
     fetchAttendance();
   }, []);
 
-  const handlePunchIn = async () => {
-    try {
-      const res = await api.post('/attendance/punchin');
-      setTodayRecord(res.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error punching in');
-    }
-  };
-
-  const handlePunchOut = async () => {
-    try {
-      const res = await api.post('/attendance/punchout');
-      setTodayRecord(res.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error punching out');
-    }
-  };
-
   return (
     <Layout allowedRoles={['employee']}>
       <div className="space-y-8">
-        <h1 className="text-2xl font-bold">Attendance</h1>
+        <h1 className="text-2xl font-bold">Attendance History</h1>
         
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
@@ -76,41 +43,6 @@ export default function AttendancePage() {
         )}
 
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-medium mb-4">Today's Attendance</h2>
-          
-          {todayRecord ? (
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span>Punch In:</span>
-                <span>{new Date(todayRecord.punchIn).toLocaleTimeString()}</span>
-              </div>
-              {todayRecord.punchOut ? (
-                <div className="flex justify-between">
-                  <span>Punch Out:</span>
-                  <span>{new Date(todayRecord.punchOut).toLocaleTimeString()}</span>
-                </div>
-              ) : (
-                <button
-                  onClick={handlePunchOut}
-                  className="w-full mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Punch Out
-                </button>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={handlePunchIn}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Punch In
-            </button>
-          )}
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-medium mb-4">Attendance History</h2>
-          
           {loading ? (
             <div>Loading...</div>
           ) : (
