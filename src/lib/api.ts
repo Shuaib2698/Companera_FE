@@ -6,7 +6,6 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor
 api.interceptors.request.use(
   (config) => {
     const token = getToken();
@@ -15,12 +14,9 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
