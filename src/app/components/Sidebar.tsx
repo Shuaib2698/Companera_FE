@@ -7,6 +7,10 @@ export default function Sidebar() {
   const pathname = usePathname();
   const user = getUserFromToken();
 
+  const commonLinks = [
+    { href: '/employee/profile', text: 'Settings' } // Changed from Profile Settings to Settings
+  ];
+
   const employeeLinks = [
     { href: '/employee/dashboard', text: 'Dashboard' },
     { href: '/employee/attendance', text: 'Attendance' },
@@ -22,7 +26,8 @@ export default function Sidebar() {
     { href: '/admin/employees', text: 'Employees' },
   ];
 
-  const links = user?.role === 'admin' ? adminLinks : employeeLinks;
+  const roleLinks = user?.role === 'admin' ? adminLinks : employeeLinks;
+  const links = [...roleLinks, ...commonLinks];
 
   return (
     <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
