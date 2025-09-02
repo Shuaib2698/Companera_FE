@@ -47,6 +47,38 @@ export default function EmployeeDashboard() {
   const [punchHistory, setPunchHistory] = useState<PunchRecord[]>([]);
   const [progress, setProgress] = useState(0);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const [punchLoading, setPunchLoading] = useState(false);
+
+  // Add to your interfaces in page.tsx
+interface WorkReport {
+  _id: string;
+  date: string;
+  workReport: string;
+  status: string;
+  comments: Comment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Comment {
+  _id: string;
+  user: {
+    _id: string;
+    name: string;
+    role: string;
+  };
+  comment: string;
+  createdAt: string;
+}
+
+// Add these states to your component
+const [workReports, setWorkReports] = useState<WorkReport[]>([]);
+const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+const [workReportText, setWorkReportText] = useState('');
+const [editingReportId, setEditingReportId] = useState<string | null>(null);
+const [workReportOverview, setWorkReportOverview] = useState<WorkReport[]>([]);
+const [activeWorkReportTab, setActiveWorkReportTab] = useState<'add' | 'overview'>('add');
+const [commentText, setCommentText] = useState('');
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -134,77 +166,170 @@ export default function EmployeeDashboard() {
     }, 1000);
   };
 
-  const handlePunchIn = async () => {
-    try {
-      const res = await api.post('/attendance/punchin');
-      setTodayRecord(res.data);
-      
-      // Add to punch history
-      setPunchHistory(prev => [...prev, {
-        _id: Date.now().toString(),
-        type: 'punchIn',
-        timestamp: new Date().toISOString()
-      }]);
-      
-      // Start progress animation
+  // Fetch work reports for overview
+const fetchWorkReports = async () => {
+  try {
+    const currentDate = new Date();
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+    
+    const res = await api.get(`/work-reports/my-reports?month=${month}&year=${year}`);
+    setWorkReportOverview(res.data);
+  } catch (err: any) {
+    setError(err.response?.data?.message || 'Error fetching work reports');
+  }
+};
+
+// Submit or update work report
+const handleSubmitWorkReport = async () => {
+  try {
+    const res = await api.post('/work-reports', {
+      date: selectedDate,
+      workReport: workReportText
+    });
+    
+    setWorkReportText('');
+    setEditingReportId(null);
+    setError('');
+    
+    // Show success message
+    alert('Work report submitted successfully!');
+  } catch (err: any) {
+    setError(err.response?.data?.message || 'Error submitting work report');
+  }
+};
+
+// Edit work report
+const editWorkReport = (report: WorkReport) => {
+  setSelectedDate(format(new Date(report.date), 'yyyy-MM-dd'));
+  setWorkReportText(report.workReport);
+  setEditingReportId(report._id);
+  setActiveWorkReportTab('add');
+};
+
+// Delete work report
+const deleteWorkReport = async (id: string) => {
+  if (!confirm('Are you sure you want to delete this work report?')) return;
+  
+  try {
+    await api.delete(`/work-reports/${id}`);
+    setWorkReportOverview(workReportOverview.filter(report => report._id !== id));
+    setError('');
+  } catch (err: any) {
+    setError(err.response?.data?.message || 'Error deleting work report');
+  }
+};
+
+// Check if report can be edited (within 1 day)
+const canEditReport = (report: WorkReport) => {
+  const now = new Date();
+  const reportDate = new Date(report.createdAt);
+  const hoursDiff = (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60);
+  return hoursDiff <= 24;
+};
+
+// Check if report can be deleted (within 1 day or admin)
+const canDeleteReport = (report: WorkReport) => {
+  const now = new Date();
+  const reportDate = new Date(report.createdAt);
+  const hoursDiff = (now.getTime() - reportDate.getTime()) / (1000 * 60 * 60);
+  return hoursDiff <= 24;
+};
+
+ const handlePunchIn = async () => {
+  setPunchLoading(true);
+  try {
+    const res = await api.post('/attendance/punch-in');
+    setTodayRecord(res.data);
+    
+    // Add to punch history
+    setPunchHistory(prev => [...prev, {
+      _id: Date.now().toString(),
+      type: 'punchIn',
+      timestamp: new Date().toISOString()
+    }]);
+    
+    // Start progress animation only if this is the first punch in of the day
+    if (!todayRecord?.punchIn) {
       setProgress(0);
       startProgressAnimation();
-      
-      setError('');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error punching in');
     }
-  };
+    
+    setError('');
+  } catch (err: any) {
+    setError(err.response?.data?.message || 'Error punching in');
+  } finally {
+    setPunchLoading(false);
+  }
+};
 
-  const handlePunchOut = async () => {
-    try {
-      const res = await api.post('/attendance/punchout');
-      setTodayRecord(res.data);
-      
-      // Add to punch history
-      setPunchHistory(prev => [...prev, {
-        _id: Date.now().toString(),
-        type: 'punchOut',
-        timestamp: new Date().toISOString()
-      }]);
-      
-      // Stop progress animation
-      if (progressInterval.current) {
-        clearInterval(progressInterval.current);
-      }
+const handlePunchOut = async () => {
+  setPunchLoading(true);
+  try {
+    const res = await api.post('/attendance/punch-out');
+    setTodayRecord(res.data);
+    
+    // Add to punch history
+    setPunchHistory(prev => [...prev, {
+      _id: Date.now().toString(),
+      type: 'punchOut',
+      timestamp: new Date().toISOString()
+    }]);
+    
+    // Stop progress animation only if this is the final punch out
+    const lastPunchType = getLastPunchType();
+    if (lastPunchType === 'out' && progressInterval.current) {
+      clearInterval(progressInterval.current);
       setProgress(100);
-      
-      setError('');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Error punching out');
     }
-  };
+    
+    setError('');
+  } catch (err: any) {
+    setError(err.response?.data?.message || 'Error punching out');
+  } finally {
+    setPunchLoading(false);
+  }
+};
 
   const handleManualPunchSubmit = async () => {
-    try {
-      // Validate the date is in the past
-      const punchDate = new Date(manualPunchData.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (punchDate >= today) {
-        throw new Error('Manual punch only allowed for previous days');
-      }
-
-      const res = await api.post('/attendance/manual', {
-        date: manualPunchData.date,
-        punchIn: manualPunchData.punchIn,
-        punchOut: manualPunchData.punchOut,
-        reason: manualPunchData.reason
-      });
-
-      setTodayRecord(res.data);
-      setShowManualPunchModal(false);
-      setError('');
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Error creating manual punch');
+  try {
+    // Validate the date is in the past
+    const punchDate = new Date(manualPunchData.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (punchDate >= today) {
+      throw new Error('Manual punch only allowed for previous days');
     }
-  };
+
+    // Convert to punches array format for the new system
+    const punches = [];
+    if (manualPunchData.punchIn) {
+      punches.push({
+        type: 'in',
+        time: new Date(`${manualPunchData.date}T${manualPunchData.punchIn}`)
+      });
+    }
+    if (manualPunchData.punchOut) {
+      punches.push({
+        type: 'out',
+        time: new Date(`${manualPunchData.date}T${manualPunchData.punchOut}`)
+      });
+    }
+
+    const res = await api.post('/attendance/manual', {
+      date: manualPunchData.date,
+      punches: punches,
+      reason: manualPunchData.reason
+    });
+
+    setTodayRecord(res.data);
+    setShowManualPunchModal(false);
+    setError('');
+  } catch (err: any) {
+    setError(err.response?.data?.message || err.message || 'Error creating manual punch');
+  }
+};
 
   const navigateToAttendance = () => {
     router.push('/employee/attendance');
@@ -215,36 +340,50 @@ export default function EmployeeDashboard() {
     leave.status === 'approved' && new Date(leave.startDate) > new Date()
   ).length;
 
-  // Calculate total worked hours from punch history
-  const calculateWorkedHours = () => {
-    if (punchHistory.length === 0) return '0h 0m';
-    
-    let totalMs = 0;
-    let punchInTime: Date | null = null;
-    
-    punchHistory.forEach(punch => {
-      if (punch.type === 'punchIn') {
-        punchInTime = new Date(punch.timestamp);
-      } else if (punch.type === 'punchOut' && punchInTime) {
-        const punchOutTime = new Date(punch.timestamp);
-        totalMs += punchOutTime.getTime() - punchInTime.getTime();
-        punchInTime = null;
-      }
-    });
-    
-    // If currently punched in but not out
-    if (punchInTime) {
-      totalMs += new Date().getTime() - punchInTime.getTime();
-    }
-    
-    const hours = Math.floor(totalMs / (1000 * 60 * 60));
-    const minutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${hours}h ${minutes}m`;
-  };
 
-  // Check if user can punch out (must have punched in last)
-  const canPunchOut = punchHistory.length > 0 && punchHistory[punchHistory.length - 1].type === 'punchIn';
+const calculateWorkedHours = () => {
+  if (punchHistory.length === 0) return '0h 0m';
+  
+  let totalMs = 0;
+  let punchInTime: Date | null = null;
+  
+  punchHistory.forEach(punch => {
+    if (punch.type === 'punchIn') {
+      punchInTime = new Date(punch.timestamp);
+    } else if (punch.type === 'punchOut' && punchInTime) {
+      const punchOutTime = new Date(punch.timestamp);
+      totalMs += punchOutTime.getTime() - punchInTime.getTime();
+      punchInTime = null;
+    }
+  });
+  
+  // If currently punched in but not out
+  if (punchInTime) {
+    totalMs += new Date().getTime() - punchInTime.getTime();
+  }
+  
+  const hours = Math.floor(totalMs / (1000 * 60 * 60));
+  const minutes = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  return `${hours}h ${minutes}m`;
+};
+
+const getLastPunchType = () => {
+  if (!todayRecord || !todayRecord.punches || todayRecord.punches.length === 0) return null;
+  return todayRecord.punches[todayRecord.punches.length - 1].type;
+};
+
+const canPunchIn = () => {
+  const lastPunch = getLastPunchType();
+  // Allow punch in if no punches yet or last punch was out
+  return lastPunch === null || lastPunch === 'out';
+};
+
+const canPunchOut = () => {
+  const lastPunch = getLastPunchType();
+  // Allow punch out only if last punch was in
+  return lastPunch === 'in';
+};
 
   return (
     <Layout allowedRoles={['employee']}>
@@ -335,14 +474,14 @@ export default function EmployeeDashboard() {
                         {/* Punch In Button */}
                         <div className="relative">
                           <button
-                            onClick={handlePunchIn}
-                            disabled={todayRecord?.punchIn}
-                            className={`w-28 h-28 rounded-full flex flex-col items-center justify-center text-white font-semibold transition-all duration-300 shadow-lg ${
-                              todayRecord?.punchIn 
-                                ? 'bg-green-500 cursor-not-allowed shadow-green-200' 
-                                : 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-blue-200 hover:shadow-xl transform hover:-translate-y-1'
-                            }`}
-                          >
+  onClick={handlePunchIn}
+  disabled={!canPunchIn() || punchLoading}  // Add punchLoading to disabled condition
+  className={`w-28 h-28 rounded-full flex flex-col items-center justify-center text-white font-semibold transition-all duration-300 shadow-lg ${
+    !canPunchIn() || punchLoading  // Add punchLoading here too
+      ? 'bg-green-500 cursor-not-allowed shadow-green-200' 
+      : 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-blue-200 hover:shadow-xl transform hover:-translate-y-1'
+  }`}
+>
                             <div className="bg-white/20 rounded-full p-3 mb-2">
                               <Image 
                                 src="/icons/punchin.png" 
@@ -398,15 +537,15 @@ export default function EmployeeDashboard() {
                             
                             {/* Punch Out Button */}
                             <button
-                              onClick={handlePunchOut}
-                              disabled={!canPunchOut}
-                              className={`absolute inset-0 w-24 h-24 rounded-full flex flex-col items-center justify-center text-white font-semibold transition-all duration-300 shadow-lg ${
-                                !canPunchOut 
-                                  ? 'bg-gray-400 cursor-not-allowed shadow-gray-200' 
-                                  : 'bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-indigo-200 hover:shadow-xl transform hover:-translate-y-1'
-                              }`}
-                              style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
-                            >
+  onClick={handlePunchOut}
+  disabled={!canPunchOut() || punchLoading}  // Add punchLoading to disabled condition
+  className={`absolute inset-0 w-24 h-24 rounded-full flex flex-col items-center justify-center text-white font-semibold transition-all duration-300 shadow-lg ${
+    !canPunchOut() || punchLoading  // Add punchLoading here too
+      ? 'bg-gray-400 cursor-not-allowed shadow-gray-200' 
+      : 'bg-gradient-to-br from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-indigo-200 hover:shadow-xl transform hover:-translate-y-1'
+  }`}
+  style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
+>
                               <div className="bg-white/20 rounded-full p-3 mb-2">
                                 <Image 
                                   src="/icons/punchout.png" 
@@ -488,35 +627,143 @@ export default function EmployeeDashboard() {
                     </div>
                   )}
 
-                  {activeTab === 'workReport' && (
-                    <div className="p-6">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-6">Daily Work Report</h3>
-                      <div className="mb-5">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                        <input 
-                          type="date" 
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
-                          max={format(new Date(), 'yyyy-MM-dd')}
-                        />
-                      </div>
-                      <div className="mb-5">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Work Report</label>
-                        <textarea 
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300" 
-                          rows={5}
-                          placeholder="Describe what you worked on today..."
-                        />
-                      </div>
-                      <div className="flex space-x-3">
-                        <button className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 font-medium transition-all duration-300 shadow-md hover:shadow-lg">
-                          Submit Report
-                        </button>
-                        <button className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors duration-300">
-                          Cancel
-                        </button>
-                      </div>
+{activeTab === 'workReport' && (
+  <div className="p-6">
+    <div className="flex border-b border-gray-200 mb-6">
+      <button
+        className={`px-6 py-3 font-medium text-sm transition-all duration-300 ${activeWorkReportTab === 'add' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+        onClick={() => setActiveWorkReportTab('add')}
+      >
+        Add Work Report
+      </button>
+      <button
+        className={`px-6 py-3 font-medium text-sm transition-all duration-300 ${activeWorkReportTab === 'overview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+        onClick={() => {
+          setActiveWorkReportTab('overview');
+          fetchWorkReports();
+        }}
+      >
+        Work Report Overview
+      </button>
+    </div>
+
+    {activeWorkReportTab === 'add' && (
+      <>
+        <h3 className="text-xl font-semibold text-gray-800 mb-6">Daily Work Report</h3>
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+          <input 
+            type="date" 
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300"
+            max={format(new Date(), 'yyyy-MM-dd')}
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+          />
+        </div>
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Work Report</label>
+          <textarea 
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-300" 
+            rows={5}
+            placeholder="Describe what you worked on today..."
+            value={workReportText}
+            onChange={(e) => setWorkReportText(e.target.value)}
+          />
+        </div>
+        <div className="flex space-x-3">
+          <button 
+            onClick={handleSubmitWorkReport}
+            className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 font-medium transition-all duration-300 shadow-md hover:shadow-lg"
+          >
+            {editingReportId ? 'Update Report' : 'Submit Report'}
+          </button>
+          {editingReportId && (
+            <button 
+              onClick={() => {
+                setEditingReportId(null);
+                setWorkReportText('');
+              }}
+              className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors duration-300"
+            >
+              Cancel Edit
+            </button>
+          )}
+        </div>
+      </>
+    )}
+
+    {activeWorkReportTab === 'overview' && (
+      <div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-6">Work Report Overview</h3>
+        {workReportOverview.length === 0 ? (
+          <div className="text-center py-8">
+            <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-gray-500">No work reports found</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {workReportOverview.map((report) => (
+              <div key={report._id} className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      {format(new Date(report.date), 'EEEE, MMMM d, yyyy')}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {format(new Date(report.createdAt), 'MMM d, yyyy h:mm a')}
+                    </p>
+                  </div>
+                  <div className="flex space-x-2">
+                    {canEditReport(report) && (
+                      <button 
+                        onClick={() => editWorkReport(report)}
+                        className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors duration-300"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {canDeleteReport(report) && (
+                      <button 
+                        onClick={() => deleteWorkReport(report._id)}
+                        className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200 transition-colors duration-300"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg mb-4">
+                  <p className="text-gray-700 whitespace-pre-wrap">{report.workReport}</p>
+                </div>
+                
+                {report.comments && report.comments.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-medium text-gray-800 mb-3">Comments</h4>
+                    <div className="space-y-3">
+                      {report.comments.map((comment) => (
+                        <div key={comment._id} className="bg-white p-3 rounded-lg border border-gray-200">
+                          <div className="flex justify-between items-start mb-2">
+                            <p className="font-medium text-gray-800">{comment.user.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {format(new Date(comment.createdAt), 'MMM d, yyyy h:mm a')}
+                            </p>
+                          </div>
+                          <p className="text-gray-700">{comment.comment}</p>
+                        </div>
+                      ))}
                     </div>
-                  )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+)}
 
                   {activeTab === 'leaves' && (
                     <div className="p-6">
