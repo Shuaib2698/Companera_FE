@@ -494,174 +494,182 @@ export default function EmployeeDashboard() {
                       </div>
 
                       <div className="grid grid-cols-2 gap-2 md:gap-6 mt-3 md:mt-6">
-                        {/* Punch In */}
-                        <div className="flex items-center justify-center flex-col">
-                          <div className="w-[8rem] h-[8rem] md:w-[14rem] md:h-[14rem] rounded-full flex justify-center items-center">
-                            <div
-                              onClick={canPunchIn() && !punchLoading ? handlePunchIn : undefined}
-                              className={`flex items-center justify-center w-[7rem] h-[7rem] md:w-[12.5rem] md:h-[12.5rem] rounded-full ${!canPunchIn() || punchLoading
-                                  ? "bg-gray-300 cursor-not-allowed"
-                                  : "bg-[#E2E6EA] cursor-pointer hover:bg-gray-200 transition-colors"
-                                }`}
-                            >
-                              <div className="relative flex items-center justify-center w-[5.5rem] h-[5.5rem] md:w-[9.5rem] md:h-[9.5rem] shadow-lg rounded-full bg-gray-100">
-                                <div className="absolute w-[4.5rem] h-[4.5rem] md:w-[8rem] md:h-[8rem] bg-gradient-to-r from-[#E4E7ED] to-[#FFFFFF] rounded-full flex flex-col items-center justify-center">
-                                  <Image
-                                    src="/icons/punchin.png"
-                                    alt="Punch In"
-                                    width={32}
-                                    height={32}
-                                    className="w-6 h-8 md:w-8 md:h-12"
-                                  />
-                                  <p className="mt-1 text-[10px] md:text-xs font-semibold text-gray-800">
-                                    PUNCH IN
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="bg-[#EEEEEE] mt-3 py-1.5 px-3 rounded-full">
-                            <p className="text-gray-500 text-[10px] md:text-sm flex items-center justify-center">
-                              <Circle
-                                size={10}
-                                className="text-yellow-500 mr-1 md:mr-2 bg-yellow-500 rounded-full"
-                              />
-                              {(() => {
-                                let punchInTime = null;
+  {/* Punch In & Punch Out section */}
+  <div className="flex items-center justify-center flex-col">
+    {/* Punch In Section */}
+    <div className="w-[8rem] h-[8rem] md:w-[14rem] md:h-[14rem] rounded-full flex justify-center items-center">
+      <div
+        onClick={canPunchIn() && !punchLoading ? handlePunchIn : undefined}
+        className={`flex items-center justify-center w-[7rem] h-[7rem] md:w-[12.5rem] md:h-[12.5rem] rounded-full ${
+          !canPunchIn() || punchLoading
+            ? "bg-gray-300 cursor-not-allowed"
+            : "bg-[#E2E6EA] cursor-pointer hover:bg-gray-200 transition-colors"
+        }`}
+      >
+        <div className="relative flex items-center justify-center w-[5.5rem] h-[5.5rem] md:w-[9.5rem] md:h-[9.5rem] shadow-lg rounded-full bg-gray-100">
+          <div className="absolute w-[4.5rem] h-[4.5rem] md:w-[8rem] md:h-[8rem] bg-gradient-to-r from-[#E4E7ED] to-[#FFFFFF] rounded-full flex flex-col items-center justify-center">
+            <Image
+              src="/icons/punchin.png"
+              alt="Punch In"
+              width={32}
+              height={32}
+              className="w-6 h-8 md:w-8 md:h-12"
+            />
+            <p className="mt-1 text-[10px] md:text-xs font-semibold text-gray-800">
+              PUNCH IN
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="bg-[#EEEEEE] mt-3 py-1.5 px-3 rounded-full">
+      <p className="text-gray-500 text-[10px] md:text-sm flex items-center justify-center">
+        <Circle
+          size={10}
+          className="text-yellow-500 mr-1 md:mr-2 bg-yellow-500 rounded-full"
+        />
+        {(() => {
+          let punchInTime = null;
 
-                                // Check for punch records in new format
-                                if (todayRecord?.punches) {
-                                  const punchInRecord = todayRecord.punches.find((punch: any) => punch.type === 'in');
-                                  if (punchInRecord) {
-                                    punchInTime = punchInRecord.time;
-                                  }
-                                }
-                                // Fallback to old format
-                                else if (todayRecord?.punchIn) {
-                                  punchInTime = todayRecord.punchIn;
-                                }
+          if (todayRecord?.punches) {
+            const punchInRecord = todayRecord.punches.find((punch: any) => punch.type === 'in');
+            if (punchInRecord) {
+              punchInTime = punchInRecord.time;
+            }
+          } else if (todayRecord?.punchIn) {
+            punchInTime = todayRecord.punchIn;
+          }
 
-                                return punchInTime
-                                  ? `Punch In at ${format(new Date(punchInTime), 'h:mm a')}`
-                                  : "Not Punched In yet";
-                              })()}
-                            </p>
-                          </div>
-                        </div>
+          return punchInTime
+            ? `Punch In at ${format(new Date(punchInTime), 'h:mm a')}`
+            : "Not Punched In yet";
+        })()}
+      </p>
+    </div>
+  </div>
 
-                        {/* Punch Out */}
-                        <div className="flex items-center justify-center flex-col">
-                          <div className="relative w-[8rem] h-[8rem] md:w-[14rem] md:h-[14rem] rounded-full flex items-center justify-center">
-                            <svg
-                              className="absolute top-1 right-1 w-full h-full transform -rotate-90"
-                              viewBox="0 0 225 225"
-                            >
-                              <circle
-                                cx="120"
-                                cy="120"
-                                r={RADIUS}
-                                stroke={progressColor}
-                                strokeWidth="8"
-                                fill="none"
-                                strokeDasharray={CIRCUMFERENCE}
-                                strokeDashoffset={strokeDashoffset}
-                                strokeLinecap="round"
-                              />
-                            </svg>
+  {/* Add margin top to create a gap */}
+  <div className="mt-8 flex items-center justify-center flex-col">
+    {/* Punch Out Section */}
+    <div className="relative w-[8rem] h-[8rem] md:w-[14rem] md:h-[14rem] rounded-full flex items-center justify-center">
+      <svg
+        className="absolute top-1 right-1 w-full h-full transform -rotate-90"
+        viewBox="0 0 225 225"
+      >
+        <circle
+          cx="120"
+          cy="120"
+          r={RADIUS}
+          stroke={progressColor}
+          strokeWidth="8"
+          fill="none"
+          strokeDasharray={CIRCUMFERENCE}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+        />
+      </svg>
 
-                            <div
-                              className={`flex items-center justify-center w-[7rem] h-[7rem] md:w-[12.5rem] md:h-[12.5rem] rounded-full ${canPunchOut() && !punchLoading
-                                  ? "bg-[#E2E6EA] cursor-pointer hover:bg-gray-200 transition-colors"
-                                  : "bg-gray-300 cursor-not-allowed"
-                                }`}
-                            >
-                              <div
-                                onClick={canPunchOut() && !punchLoading ? handlePunchOut : undefined}
-                                className="relative flex items-center justify-center w-[5.5rem] h-[5.5rem] md:w-[9.5rem] md:h-[9.5rem] shadow-lg rounded-full bg-gray-100"
-                              >
-                                <div className="absolute w-[4.5rem] h-[4.5rem] md:w-[8rem] md:h-[8rem] bg-gradient-to-r from-[#E4E7ED] to-[#FFFFFF] rounded-full flex flex-col items-center justify-center">
-                                  <Image
-                                    src="/icons/punchout.png"
-                                    alt="Punch Out"
-                                    width={32}
-                                    height={32}
-                                    className="w-6 h-8 md:w-8 md:h-12"
-                                  />
-                                  <p className="mt-1 text-[10px] md:text-xs font-semibold text-gray-800">
-                                    PUNCH OUT
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="bg-[#EEEEEE] mt-3 py-1.5 px-3 rounded-full">
-                            <p className="text-gray-500 text-[10px] md:text-sm flex items-center justify-center">
-                              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-1 md:mr-2" />
-                              {(() => {
-                                let punchOutTime = null;
+      <div
+        className={`flex items-center justify-center w-[7rem] h-[7rem] md:w-[12.5rem] md:h-[12.5rem] rounded-full ${
+          canPunchOut() && !punchLoading
+            ? "bg-[#E2E6EA] cursor-pointer hover:bg-gray-200 transition-colors"
+            : "bg-gray-300 cursor-not-allowed"
+        }`}
+      >
+        <div
+          onClick={canPunchOut() && !punchLoading ? handlePunchOut : undefined}
+          className="relative flex items-center justify-center w-[5.5rem] h-[5.5rem] md:w-[9.5rem] md:h-[9.5rem] shadow-lg rounded-full bg-gray-100"
+        >
+          <div className="absolute w-[4.5rem] h-[4.5rem] md:w-[8rem] md:h-[8rem] bg-gradient-to-r from-[#E4E7ED] to-[#FFFFFF] rounded-full flex flex-col items-center justify-center">
+            <Image
+              src="/icons/punchout.png"
+              alt="Punch Out"
+              width={32}
+              height={32}
+              className="w-6 h-8 md:w-8 md:h-12"
+            />
+            <p className="mt-1 text-[10px] md:text-xs font-semibold text-gray-800">
+              PUNCH OUT
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div className="bg-[#EEEEEE] mt-3 py-1.5 px-3 rounded-full">
+      <p className="text-gray-500 text-[10px] md:text-sm flex items-center justify-center">
+        <span className="w-2 h-2 bg-yellow-500 rounded-full mr-1 md:mr-2" />
+        {(() => {
+          let punchOutTime = null;
 
-                                // Check for punch records in new format
-                                if (todayRecord?.punches) {
-                                  const punchOutRecord = todayRecord.punches.find((punch: any) => punch.type === 'out');
-                                  if (punchOutRecord) {
-                                    punchOutTime = punchOutRecord.time;
-                                    return `Punch Out at ${format(new Date(punchOutTime), 'h:mm a')}`;
-                                  }
-                                }
-                                // Fallback to old format
-                                else if (todayRecord?.punchOut) {
-                                  punchOutTime = todayRecord.punchOut;
-                                  return `Punch Out at ${format(new Date(punchOutTime), 'h:mm a')}`;
-                                }
+          if (todayRecord?.punches) {
+            const punchOutRecord = todayRecord.punches.find((punch: any) => punch.type === 'out');
+            if (punchOutRecord) {
+              punchOutTime = punchOutRecord.time;
+              return `Punch Out at ${format(new Date(punchOutTime), 'h:mm a')}`;
+            }
+          } else if (todayRecord?.punchOut) {
+            punchOutTime = todayRecord.punchOut;
+            return `Punch Out at ${format(new Date(punchOutTime), 'h:mm a')}`;
+          }
 
-                                return canPunchOut() ? "Ready to Punch Out" : "Punch In First";
-                              })()}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+          return canPunchOut() ? "Ready to Punch Out" : "Punch In First";
+        })()}
+      </p>
+    </div>
+  </div>
+</div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl border border-blue-200 text-center">
-                          <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">Scheduled</p>
-                          <p className="font-semibold text-xl text-gray-800">8h 0m</p>
-                        </div>
-                        <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl border border-green-200 text-center">
-                          <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                            </svg>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">Worked</p>
-                          <p className="font-semibold text-xl text-gray-800">{calculateWorkedHours()}</p>
-                        </div>
-                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-xl border border-purple-200 text-center">
-                          <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">Balance</p>
-                          <p className="font-semibold text-xl text-gray-800">0h 0m</p>
-                        </div>
-                      </div>
+{/* The stats section */}
+<div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl border border-blue-200 text-center">
+    <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <p className="text-sm text-gray-600 mb-1">Scheduled</p>
+    <p className="font-semibold text-xl text-gray-800">8h 0m</p>
+  </div>
 
-                      <div className="text-center">
-                        <button
-                          onClick={() => setShowManualPunchModal(true)}
-                          className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors duration-300"
-                        >
-                          <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                          </svg>
-                          Add Manual Punch in/out
-                        </button>
-                      </div>
+  <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl border border-green-200 text-center">
+    <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+    </div>
+    <p className="text-sm text-gray-600 mb-1">Worked</p>
+    <p className="font-semibold text-xl text-gray-800">{calculateWorkedHours()}</p>
+  </div>
+
+  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-xl border border-purple-200 text-center">
+    <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+      <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    </div>
+    <p className="text-sm text-gray-600 mb-1">Balance</p>
+    <p className="font-semibold text-xl text-gray-800">0h 0m</p>
+  </div>
+</div>
+
+
+
+                      <div className="flex justify-center">
+  <button
+    onClick={() => setShowManualPunchModal(true)}
+    className="flex items-center justify-center bg-purple-500 text-white hover:bg-purple-600 px-6 py-3 rounded-lg text-lg font-medium transition-colors duration-300 w-full max-w-md"
+  >
+    <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+      <path
+        fillRule="evenodd"
+        d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+        clipRule="evenodd"
+      />
+    </svg>
+    Add Manual Punch in/out
+  </button>
+</div>
+
                     </div>
                   )}
 
@@ -926,33 +934,34 @@ export default function EmployeeDashboard() {
               {/* Right side - Calendar, Announcements and Quick Stats */}
               <div className="space-y-6">
                 {/* Small Calendar */}
-                <div className="bg-white rounded-2xl shadow-lg p-5">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">My Schedule</h3>
-                  <div className="text-center mb-4">
-                    <h4 className="font-semibold text-gray-700">May, 2025</h4>
-                  </div>
-                  <div className="grid grid-cols-7 gap-2 text-center text-xs">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-                      <div key={day} className="font-medium text-gray-500 py-2">{day}</div>
-                    ))}
-
-                    {/* Empty days for the first week */}
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div key={`empty-${i}`} className="py-2"></div>
-                    ))}
-
-                    {/* Days of the month */}
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                      <div
-                        key={day}
-                        className={`py-2 rounded-full transition-colors duration-300 ${day === 24
-                            ? 'bg-blue-500 text-white font-semibold shadow-md'
-                            : 'hover:bg-gray-100'
-                          }`}
-                      >
+                <div className="bg-white rounded-2xl shadow-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">{currentMonth} {currentYear}</h3>
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                      <div key={index} className="text-center text-xs font-medium text-gray-500 py-1">
                         {day}
                       </div>
                     ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array(firstDayOfMonth).fill(null).map((_, index) => (
+                      <div key={`empty-${index}`} className="h-8"></div>
+                    ))}
+                    {Array(daysInMonth).fill(null).map((_, index) => {
+                      const day = index + 1;
+                      const isToday = day === currentDate.getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
+                      return (
+                        <div
+                          key={day}
+                          className={`h-8 flex items-center justify-center text-sm rounded-full ${isToday
+                              ? 'bg-blue-600 text-white font-medium'
+                              : 'text-gray-700 hover:bg-gray-100 cursor-pointer'
+                            }`}
+                        >
+                          {day}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
