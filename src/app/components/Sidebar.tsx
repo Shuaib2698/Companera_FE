@@ -1,3 +1,4 @@
+// Updated Sidebar.tsx
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -8,19 +9,22 @@ export default function Sidebar() {
   const user = getUserFromToken();
 
   const commonLinks = [
-    { href: '/employee/profile', text: 'Settings' } // Changed from Profile Settings to Settings
+    { href: '/employee/profile', text: 'Settings' }
   ];
 
   const employeeLinks = [
     { href: '/employee/dashboard', text: 'Dashboard' },
     { href: '/employee/attendance', text: 'Attendance' },
     { href: '/employee/leaves', text: 'Leaves & WFH' },
+    { href: '/employee/holidays', text: 'Holidays' }, // Added Holidays for employees
     { href: '/employee/announcement', text: 'Announcements' },
     { href: '/employee/payment-Request', text: 'Payment Requests' },
   ];
 
   const adminLinks = [
     { href: '/admin/dashboard', text: 'Dashboard' },
+    { href: '/admin/leaves', text: 'Leaves & WFH' },
+    { href: '/admin/holidays', text: 'Holidays' }, // Added Holidays for admins
     { href: '/admin/announcement', text: 'Announcements' },
     { href: '/admin/payment-Request', text: 'Payment Requests' },
     { href: '/admin/employees', text: 'Employees' },

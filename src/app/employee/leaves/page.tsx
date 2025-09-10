@@ -15,6 +15,7 @@ interface Leave {
   reason: string;
   status: string;
   approvedBy?: { name: string };
+  rejectionReason?: string;
 }
 
 interface WFH {
@@ -23,6 +24,7 @@ interface WFH {
   reason: string;
   status: string;
   approvedBy?: { name: string };
+  rejectionReason?: string;
 }
 
 interface User {
@@ -66,15 +68,17 @@ export default function LeavesPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [leavesRes] = await Promise.all([
+        const [leavesRes, wfhRes] = await Promise.all([
           api.get("/leaves/my-leaves"),
+          api.get("/wfh/my-wfh"),
         ]);
 
         setLeaves(leavesRes.data);
+        setWfhRequests(wfhRes.data);
         
         // Set default user data since /users/me endpoint doesn't exist
         setUser({
-          name: "Employee User", // You might want to get this from auth context or localStorage
+          name: "Employee User",
           position: "Employee",
           leaveBalances: {
             casual: 7,
@@ -88,9 +92,6 @@ export default function LeavesPage() {
             wfh: 7
           }
         });
-        
-        // WFH data - you'll need to implement this endpoint
-        setWfhRequests([]);
       } catch (err: any) {
         setError(err.response?.data?.message || "Error fetching data");
       } finally {
@@ -115,22 +116,11 @@ export default function LeavesPage() {
 
   const handleWFHSubmit = async () => {
     try {
-      // You'll need to implement the WFH endpoint
-      // const res = await api.post("/wfh", wfhForm);
-      // setWfhRequests([res.data, ...wfhRequests]);
-      
-      // Temporary mock response
-      const mockWFH: WFH = {
-        _id: Date.now().toString(),
-        date: wfhForm.date,
-        reason: wfhForm.reason,
-        status: "pending"
-      };
-      setWfhRequests([mockWFH, ...wfhRequests]);
+      const res = await api.post("/wfh", wfhForm);
+      setWfhRequests([res.data, ...wfhRequests]);
       setShowWFHModal(false);
       setWfhForm({ date: "", reason: "" });
       setError("");
-      alert("WFH request submitted (mock) - implement backend endpoint");
     } catch (err: any) {
       setError(err.response?.data?.message || "Error applying for WFH");
     }
@@ -138,7 +128,7 @@ export default function LeavesPage() {
 
   if (loading) {
     return (
-      <Layout allowedRoles={["employee"]}>
+      <Layout allowedRoles={["employee", "admin"]}>
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
@@ -147,7 +137,7 @@ export default function LeavesPage() {
   }
 
   return (
-    <Layout allowedRoles={["employee"]}>
+    <Layout allowedRoles={["employee", "admin"]}>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Header */}
@@ -191,6 +181,11 @@ export default function LeavesPage() {
                 { key: "casual", label: "Casual Leave", color: "blue" },
                 { key: "sick", label: "Sick Leave", color: "green" },
                 { key: "earned", label: "Earned Leave", color: "purple" },
+                { key: "bereavement", label: "Bereavement", color: "gray" },
+                { key: "compOff", label: "Comp Off", color: "orange" },
+                { key: "unpaid", label: "Unpaid Leave", color: "red" },
+                { key: "paternity", label: "Paternity", color: "blue" },
+                { key: "maternity", label: "Maternity", color: "pink" },
                 { key: "wfh", label: "WFH", color: "indigo" }
               ].map((item) => (
                 <div key={item.key} className={`bg-gradient-to-br from-${item.color}-50 to-${item.color}-100 p-4 rounded-xl border border-${item.color}-200`}>
@@ -199,8 +194,8 @@ export default function LeavesPage() {
                   <p className="text-sm text-gray-600">
                     Used: {
                       item.key === "wfh" 
-                        ? wfhRequests.length 
-                        : leaves.filter(l => l.type === item.key).length
+                        ? wfhRequests.filter(w => w.status === 'approved').length
+                        : leaves.filter(l => l.type === item.key && l.status === 'approved').length
                     }
                   </p>
                 </div>
@@ -259,6 +254,9 @@ export default function LeavesPage() {
                                 {format(new Date(leave.startDate), 'MMM d, yyyy')} - {format(new Date(leave.endDate), 'MMM d, yyyy')}
                               </p>
                               <p className="text-sm text-gray-600 mt-1">{leave.reason}</p>
+                              {leave.rejectionReason && (
+                                <p className="text-sm text-red-600 mt-1">Rejection Reason: {leave.rejectionReason}</p>
+                              )}
                             </div>
                             <span className={`px-3 py-1 text-xs rounded-full font-medium ${leave.status === 'approved' ? 'bg-green-100 text-green-800' :
                                 leave.status === 'rejected' ? 'bg-red-100 text-red-800' :
@@ -307,6 +305,9 @@ export default function LeavesPage() {
                                 {format(new Date(wfh.date), 'EEEE, MMMM d, yyyy')}
                               </p>
                               <p className="text-sm text-gray-600 mt-1">{wfh.reason}</p>
+                              {wfh.rejectionReason && (
+                                <p className="text-sm text-red-600 mt-1">Rejection Reason: {wfh.rejectionReason}</p>
+                              )}
                             </div>
                             <span className={`px-3 py-1 text-xs rounded-full font-medium ${wfh.status === 'approved' ? 'bg-green-100 text-green-800' :
                                 wfh.status === 'rejected' ? 'bg-red-100 text-red-800' :
@@ -364,6 +365,10 @@ export default function LeavesPage() {
               <option value="sick">Sick Leave</option>
               <option value="earned">Earned Leave</option>
               <option value="bereavement">Bereavement Leave</option>
+              <option value="compOff">Comp Off</option>
+              <option value="unpaid">Unpaid Leave</option>
+              <option value="paternity">Paternity Leave</option>
+              <option value="maternity">Maternity Leave</option>
             </select>
           </div>
           <div>
