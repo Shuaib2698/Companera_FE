@@ -14,8 +14,6 @@ export default function Sidebar() {
 
   const employeeLinks = [
     { href: '/employee/dashboard', text: 'Dashboard' },
-    { href: '/employee/attendance', text: 'Attendance' },
-    { href: '/employee/leaves', text: 'Leaves & WFH' },
     { href: '/employee/holidays', text: 'Holidays' }, // Added Holidays for employees
     { href: '/employee/announcement', text: 'Announcements' },
     { href: '/employee/payment-Request', text: 'Payment Requests' },
