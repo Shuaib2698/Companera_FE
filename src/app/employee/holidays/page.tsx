@@ -95,28 +95,40 @@ export default function EmployeeHolidaysPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {holidays.map(holiday => (
-                  <div key={holiday._id} className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium text-gray-800">{holiday.name}</p>
-                        <p className="text-sm text-gray-500">
-                          {format(new Date(holiday.date), 'EEEE, MMMM d, yyyy')}
-                        </p>
-                        {holiday.description && (
-                          <p className="text-sm text-gray-600 mt-1">{holiday.description}</p>
-                        )}
-                      </div>
-                      <span className={`px-3 py-1 text-xs rounded-full font-medium ${
-                        holiday.type === 'government' ? 'bg-blue-100 text-blue-800' :
-                        holiday.type === 'company' ? 'bg-green-100 text-green-800' :
-                        'bg-purple-100 text-purple-800'
-                      }`}>
-                        {holiday.type.charAt(0).toUpperCase() + holiday.type.slice(1)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                {holidays.map(holiday => {
+  const holidayDate = new Date(holiday.date);
+  const isPastHoliday = holidayDate < new Date();
+  
+  return (
+    <div key={holiday._id} className={`bg-gray-50 rounded-xl p-5 border ${isPastHoliday ? 'border-red-200' : 'border-green-200'}`}>
+      <div className="flex justify-between items-start">
+        <div>
+          <p className="font-medium text-gray-800">{holiday.name}</p>
+          <p className="text-sm text-gray-500">
+            {format(holidayDate, 'EEEE, MMMM d, yyyy')}
+          </p>
+          {holiday.description && (
+            <p className="text-sm text-gray-600 mt-1">{holiday.description}</p>
+          )}
+        </div>
+        <div className="flex flex-col items-end">
+          <span className={`px-3 py-1 text-xs rounded-full font-medium mb-2 ${
+            holiday.type === 'government' ? 'bg-blue-100 text-blue-800' :
+            holiday.type === 'company' ? 'bg-green-100 text-green-800' :
+            'bg-purple-100 text-purple-800'
+          }`}>
+            {holiday.type.charAt(0).toUpperCase() + holiday.type.slice(1)}
+          </span>
+          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+            isPastHoliday ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+          }`}>
+            {isPastHoliday ? 'Past' : 'Upcoming'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+})}
               </div>
             )}
           </div>

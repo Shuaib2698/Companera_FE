@@ -402,11 +402,29 @@ interface User {
     leave.status === 'approved' && new Date(leave.startDate) > new Date()
   ).length;
 
+
   const calculateWorkedHours = () => {
-    const hours = Math.floor(secondsWorked / 3600);
-    const minutes = Math.floor((secondsWorked % 3600) / 60);
-    return `${hours}h ${minutes}m`;
-  };
+  const hours = Math.floor(secondsWorked / 3600);
+  const minutes = Math.floor((secondsWorked % 3600) / 60);
+  return `${hours}h ${minutes}m`;
+};
+
+// Add this function right after calculateWorkedHours
+const calculateBalanceHours = () => {
+  if (!todayRecord) return "0h 0m";
+  
+  // Standard work hours (9 hours)
+  const standardWorkSeconds = 9 * 60 * 60;
+  
+  // Calculate balance (standard - worked)
+  const balanceSeconds = Math.max(0, standardWorkSeconds - secondsWorked);
+  
+  const hours = Math.floor(balanceSeconds / 3600);
+  const minutes = Math.floor((balanceSeconds % 3600) / 60);
+  
+  return `${hours}h ${minutes}m`;
+};
+
 
   const getLastPunchType = () => {
     if (!todayRecord) return null;
@@ -452,15 +470,35 @@ interface User {
   upcomingLeaves: 0
 });
 
+// Replace the useEffect that fetches stats with this:
 useEffect(() => {
   const fetchStats = async () => {
     try {
       const statsRes = await api.get('/stats/employee');
+      
+      // Fetch attendance records to calculate worked days
+      const currentDate = new Date();
+      const month = currentDate.getMonth() + 1;
+      const year = currentDate.getFullYear();
+      
+      const attendanceRes = await api.get(`/attendance/my-attendance?month=${month}&year=${year}`);
+      const workedDays = attendanceRes.data.filter((record: any) => 
+        record.punches && record.punches.length > 0
+      ).length;
+      
+      // Fetch holidays to calculate upcoming holidays
+      const holidaysRes = await api.get('/holidays');
+      const currentDateObj = new Date();
+      const upcomingHolidays = holidaysRes.data.filter((holiday: any) => 
+        new Date(holiday.date) > currentDateObj
+      ).length;
+      
       setStats(prev => ({
         ...prev,
         ...statsRes.data,
-        pendingLeaves, // Keep the existing pendingLeaves from leaves data
-        upcomingLeaves // Keep the existing upcomingLeaves from leaves data
+        workedDays,
+        upcomingHolidays,
+        pendingLeaves,
       }));
     } catch (err: any) {
       console.error('Error fetching stats:', err);
@@ -470,7 +508,7 @@ useEffect(() => {
   if (!loading) {
     fetchStats();
   }
-}, [loading, pendingLeaves, upcomingLeaves]);
+}, [loading, pendingLeaves]);
 
   return (
     <Layout allowedRoles={['employee']}>
@@ -683,36 +721,36 @@ useEffect(() => {
 
                       {/* The stats section */}
                       <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl border border-blue-200 text-center">
-                          <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">Scheduled</p>
-                          <p className="font-semibold text-xl text-gray-800">8h 0m</p>
-                        </div>
+  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl border border-blue-200 text-center">
+    <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <p className="text-sm text-gray-600 mb-1">Scheduled</p>
+    <p className="font-semibold text-xl text-gray-800">9h 0m</p>
+  </div>
 
-                        <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl border border-green-200 text-center">
-                          <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                            </svg>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">Worked</p>
-                          <p className="font-semibold text-xl text-gray-800">{calculateWorkedHours()}</p>
-                        </div>
+  <div className="bg-gradient-to-br from-green-50 to-green-100 p-5 rounded-xl border border-green-200 text-center">
+    <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+      <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+    </div>
+    <p className="text-sm text-gray-600 mb-1">Worked</p>
+    <p className="font-semibold text-xl text-gray-800">{calculateWorkedHours()}</p>
+  </div>
 
-                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-xl border border-purple-200 text-center">
-                          <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-1">Balance</p>
-                          <p className="font-semibold text-xl text-gray-800">0h 0m</p>
-                        </div>
-                      </div>
+  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-5 rounded-xl border border-purple-200 text-center">
+    <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+      <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    </div>
+    <p className="text-sm text-gray-600 mb-1">Balance</p>
+    <p className="font-semibold text-xl text-gray-800">{calculateBalanceHours()}</p>
+  </div>
+</div>
 
 
 
@@ -1021,6 +1059,7 @@ useEffect(() => {
 <div className="bg-white rounded-2xl shadow-lg p-5">
   <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Stats</h3>
   <div className="grid grid-cols-2 gap-4">
+    {/* 1. Pending Requests */}
     <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
       <div className="flex items-center">
         <div className="bg-blue-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
@@ -1034,19 +1073,8 @@ useEffect(() => {
         </div>
       </div>
     </div>
-    <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
-      <div className="flex items-center">
-        <div className="bg-green-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
-          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        </div>
-        <div>
-          <p className="text-xs text-gray-600">Upcoming Leaves</p>
-          <p className="font-semibold text-gray-800">{upcomingLeaves}</p>
-        </div>
-      </div>
-    </div>
+    
+    {/* 2. Working Days */}
     <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-xl border border-purple-200">
       <div className="flex items-center">
         <div className="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
@@ -1060,6 +1088,23 @@ useEffect(() => {
         </div>
       </div>
     </div>
+    
+    {/* 3. Worked Days */}
+    <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
+      <div className="flex items-center">
+        <div className="bg-green-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
+          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-xs text-gray-600">Worked Days</p>
+          <p className="font-semibold text-gray-800">{stats.workedDays || 0}</p>
+        </div>
+      </div>
+    </div>
+    
+    {/* 4. Absent Days */}
     <div className="bg-gradient-to-br from-red-50 to-red-100 p-4 rounded-xl border border-red-200">
       <div className="flex items-center">
         <div className="bg-red-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
@@ -1073,6 +1118,8 @@ useEffect(() => {
         </div>
       </div>
     </div>
+    
+    {/* 5. Approved Leaves */}
     <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-4 rounded-xl border border-yellow-200">
       <div className="flex items-center">
         <div className="bg-yellow-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
@@ -1086,6 +1133,8 @@ useEffect(() => {
         </div>
       </div>
     </div>
+    
+    {/* 6. Upcoming Holidays */}
     <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-xl border border-indigo-200">
       <div className="flex items-center">
         <div className="bg-indigo-100 w-10 h-10 rounded-full flex items-center justify-center mr-3">
@@ -1095,8 +1144,8 @@ useEffect(() => {
           </svg>
         </div>
         <div>
-          <p className="text-xs text-gray-600">Holidays</p>
-          <p className="font-semibold text-gray-800">{stats.holidays}</p>
+          <p className="text-xs text-gray-600">Upcoming Holidays</p>
+          <p className="font-semibold text-gray-800">{stats.upcomingHolidays || 0}</p>
         </div>
       </div>
     </div>
