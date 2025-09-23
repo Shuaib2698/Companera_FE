@@ -467,48 +467,53 @@ export default function EmployeeDashboard() {
     approvedLeaves: 0,
     holidays: 0,
     pendingLeaves: 0,
-    upcomingLeaves: 0
+    upcomingLeaves: 0,
+    workedDays: 0, // Add this
+  upcomingHolidays: 0 // Add this
   });
 
   // Replace the useEffect that fetches stats with this:
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const statsRes = await api.get('/stats/employee');
+useEffect(() => {
+  const fetchStats = async () => {
+    try {
+      const statsRes = await api.get('/stats/employee');
 
-        // Fetch attendance records to calculate worked days
-        const currentDate = new Date();
-        const month = currentDate.getMonth() + 1;
-        const year = currentDate.getFullYear();
+      // Fetch attendance records to calculate worked days
+      const currentDate = new Date();
+      const month = currentDate.getMonth() + 1;
+      const year = currentDate.getFullYear();
 
-        const attendanceRes = await api.get(`/attendance/my-attendance?month=${month}&year=${year}`);
-        const workedDays = attendanceRes.data.filter((record: any) =>
-          record.punches && record.punches.length > 0
-        ).length;
+      const attendanceRes = await api.get(`/attendance/my-attendance?month=${month}&year=${year}`);
+      const workedDays = attendanceRes.data.filter((record: any) =>
+        record.punches && record.punches.length > 0
+      ).length;
 
-        // Fetch holidays to calculate upcoming holidays
-        const holidaysRes = await api.get('/holidays');
-        const currentDateObj = new Date();
-        const upcomingHolidays = holidaysRes.data.filter((holiday: any) =>
-          new Date(holiday.date) > currentDateObj
-        ).length;
+      // Fetch holidays to calculate upcoming holidays
+      const holidaysRes = await api.get('/holidays');
+      const currentDateObj = new Date();
+      const upcomingHolidays = holidaysRes.data.filter((holiday: any) =>
+        new Date(holiday.date) > currentDateObj
+      ).length;
 
-        setStats(prev => ({
-          ...prev,
-          ...statsRes.data,
-          workedDays,
-          upcomingHolidays,
-          pendingLeaves,
-        }));
-      } catch (err: any) {
-        console.error('Error fetching stats:', err);
-      }
-    };
-
-    if (!loading) {
-      fetchStats();
+      setStats({
+        workingDays: statsRes.data.workingDays || 0,
+        absentDays: statsRes.data.absentDays || 0,
+        approvedLeaves: statsRes.data.approvedLeaves || 0,
+        holidays: statsRes.data.holidays || 0,
+        pendingLeaves: pendingLeaves,
+        upcomingLeaves: statsRes.data.upcomingLeaves || 0,
+        workedDays: workedDays,
+        upcomingHolidays: upcomingHolidays
+      });
+    } catch (err: any) {
+      console.error('Error fetching stats:', err);
     }
-  }, [loading, pendingLeaves]);
+  };
+
+  if (!loading) {
+    fetchStats();
+  }
+}, [loading, pendingLeaves]);
 
   return (
     <Layout allowedRoles={['employee']}>
@@ -581,143 +586,146 @@ export default function EmployeeDashboard() {
                   </div>
 
                   {activeTab === 'attendance' && (
-                    <div className="p-6">
-                      <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-semibold text-gray-800">Today's Attendance</h3>
-                        <button
-                          onClick={navigateToAttendance}
-                          className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg flex items-center"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                          </svg>
-                          Attendance History
-                        </button>
-                      </div>
+  <div className="p-6">
+    <div className="flex justify-between items-center mb-6">
+      <h3 className="text-xl font-semibold text-gray-800">Today's Attendance</h3>
+      <button
+        onClick={navigateToAttendance}
+        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 text-sm font-medium transition-all duration-300 shadow-md hover:shadow-lg flex items-center"
+      >
+        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+        Attendance History
+      </button>
+    </div>
 
-                      <div className="grid grid-cols-2 gap-2 md:gap-6 mt-3 md:mt-6">
-                        {/* Punch In Section */}
-                        <div className="flex items-center justify-center flex-col">
-                          <div className="w-[8rem] h-[8rem] md:w-[14rem] md:h-[14rem] rounded-full flex justify-center items-center">
-                            <div
-                              onClick={canPunchIn() && !punchLoading ? handlePunchIn : undefined}
-                              className={`flex items-center justify-center w-[7rem] h-[7rem] md:w-[12.5rem] md:h-[12.5rem] rounded-full ${!canPunchIn() || punchLoading
-                                  ? "bg-gray-300 cursor-not-allowed"
-                                  : "bg-[#E2E6EA] cursor-pointer hover:bg-gray-200 transition-colors"
-                                }`}
-                            >
-                              <div className="relative flex items-center justify-center w-[5.5rem] h-[5.5rem] md:w-[9.5rem] md:h-[9.5rem] shadow-lg rounded-full bg-gray-100">
-                                <div className="absolute w-[4.5rem] h-[4.5rem] md:w-[8rem] md:h-[8rem] bg-gradient-to-r from-[#E4E7ED] to-[#FFFFFF] rounded-full flex flex-col items-center justify-center">
-                                  <Image
-                                    src="/icons/punchin.png"
-                                    alt="Punch In"
-                                    width={32}
-                                    height={32}
-                                    className="w-6 h-8 md:w-8 md:h-12"
-                                  />
-                                  <p className="mt-1 text-[10px] md:text-xs font-semibold text-gray-800">
-                                    PUNCH IN
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="bg-[#EEEEEE] mt-3 py-1.5 px-3 rounded-full">
-                            <p className="text-gray-500 text-[10px] md:text-sm flex items-center justify-center">
-                              <Circle
-                                size={10}
-                                className="text-yellow-500 mr-1 md:mr-2 bg-yellow-500 rounded-full"
-                              />
-                              {(() => {
-                                let punchInTime = null;
+    {/* Fixed grid structure */}
+    <div className="flex justify-center items-center gap-8 md:gap-16 mt-3 md:mt-6">
+      {/* Punch In Section */}
+      <div className="flex flex-col items-center">
+        <div className="w-[8rem] h-[8rem] md:w-[14rem] md:h-[14rem] rounded-full flex justify-center items-center">
+          <div
+            onClick={canPunchIn() && !punchLoading ? handlePunchIn : undefined}
+            className={`flex items-center justify-center w-[7rem] h-[7rem] md:w-[12.5rem] md:h-[12.5rem] rounded-full ${
+              !canPunchIn() || punchLoading
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-[#E2E6EA] cursor-pointer hover:bg-gray-200 transition-colors"
+            }`}
+          >
+            <div className="relative flex items-center justify-center w-[5.5rem] h-[5.5rem] md:w-[9.5rem] md:h-[9.5rem] shadow-lg rounded-full bg-gray-100">
+              <div className="absolute w-[4.5rem] h-[4.5rem] md:w-[8rem] md:h-[8rem] bg-gradient-to-r from-[#E4E7ED] to-[#FFFFFF] rounded-full flex flex-col items-center justify-center">
+                <Image
+                  src="/icons/punchin.png"
+                  alt="Punch In"
+                  width={32}
+                  height={32}
+                  className="w-6 h-8 md:w-8 md:h-12"
+                />
+                <p className="mt-1 text-[10px] md:text-xs font-semibold text-gray-800">
+                  PUNCH IN
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[#EEEEEE] mt-3 py-1.5 px-3 rounded-full">
+          <p className="text-gray-500 text-[10px] md:text-sm flex items-center justify-center">
+            <Circle
+              size={10}
+              className="text-yellow-500 mr-1 md:mr-2 bg-yellow-500 rounded-full"
+            />
+            {(() => {
+              let punchInTime = null;
 
-                                if (todayRecord?.punches) {
-                                  const punchInRecord = todayRecord.punches.find((punch: any) => punch.type === 'in');
-                                  if (punchInRecord) {
-                                    punchInTime = punchInRecord.time;
-                                  }
-                                } else if (todayRecord?.punchIn) {
-                                  punchInTime = todayRecord.punchIn;
-                                }
+              if (todayRecord?.punches) {
+                const punchInRecord = todayRecord.punches.find((punch: any) => punch.type === 'in');
+                if (punchInRecord) {
+                  punchInTime = punchInRecord.time;
+                }
+              } else if (todayRecord?.punchIn) {
+                punchInTime = todayRecord.punchIn;
+              }
 
-                                return punchInTime
-                                  ? `Punch In at ${format(new Date(punchInTime), 'h:mm a')}`
-                                  : "Not Punched In yet";
-                              })()}
-                            </p>
-                          </div>
-                        </div>
+              return punchInTime
+                ? `Punch In at ${format(new Date(punchInTime), 'h:mm a')}`
+                : "Not Punched In yet";
+            })()}
+          </p>
+        </div>
+      </div>
 
-                        {/* Punch Out Section - REMOVED mt-8 class */}
-                        <div className="flex items-center justify-center flex-col">
-                          <div className="relative w-[8rem] h-[8rem] md:w-[14rem] md:h-[14rem] rounded-full flex items-center justify-center">
-                            <svg
-                              className="absolute top-1 right-1 w-full h-full transform -rotate-90"
-                              viewBox="0 0 225 225"
-                            >
-                              <circle
-                                cx="120"
-                                cy="120"
-                                r={RADIUS}
-                                stroke={progressColor}
-                                strokeWidth="8"
-                                fill="none"
-                                strokeDasharray={CIRCUMFERENCE}
-                                strokeDashoffset={strokeDashoffset}
-                                strokeLinecap="round"
-                              />
-                            </svg>
+      {/* Punch Out Section */}
+<div className="flex flex-col items-center">
+  <div className="relative w-[8rem] h-[8rem] md:w-[14rem] md:h-[14rem] rounded-full flex justify-center items-center">
+    <svg
+      className="absolute w-full h-full transform -rotate-90"
+      viewBox="0 0 225 225"
+    >
+      <circle
+        cx="112.5"
+        cy="112.5"
+        r={RADIUS}
+        stroke={progressColor}
+        strokeWidth="8"
+        fill="none"
+        strokeDasharray={CIRCUMFERENCE}
+        strokeDashoffset={strokeDashoffset}
+        strokeLinecap="round"
+      />
+    </svg>
 
-                            <div
-                              className={`flex items-center justify-center w-[7rem] h-[7rem] md:w-[12.5rem] md:h-[12.5rem] rounded-full ${canPunchOut() && !punchLoading
-                                  ? "bg-[#E2E6EA] cursor-pointer hover:bg-gray-200 transition-colors"
-                                  : "bg-gray-300 cursor-not-allowed"
-                                }`}
-                            >
-                              <div
-                                onClick={canPunchOut() && !punchLoading ? handlePunchOut : undefined}
-                                className="relative flex items-center justify-center w-[5.5rem] h-[5.5rem] md:w-[9.5rem] md:h-[9.5rem] shadow-lg rounded-full bg-gray-100"
-                              >
-                                <div className="absolute w-[4.5rem] h-[4.5rem] md:w-[8rem] md:h-[8rem] bg-gradient-to-r from-[#E4E7ED] to-[#FFFFFF] rounded-full flex flex-col items-center justify-center">
-                                  <Image
-                                    src="/icons/punchout.png"
-                                    alt="Punch Out"
-                                    width={32}
-                                    height={32}
-                                    className="w-6 h-8 md:w-8 md:h-12"
-                                  />
-                                  <p className="mt-1 text-[10px] md:text-xs font-semibold text-gray-800">
-                                    PUNCH OUT
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="bg-[#EEEEEE] mt-3 py-1.5 px-3 rounded-full">
-                            <p className="text-gray-500 text-[10px] md:text-sm flex items-center justify-center">
-                              <span className="w-2 h-2 bg-yellow-500 rounded-full mr-1 md:mr-2" />
-                              {(() => {
-                                let punchOutTime = null;
+    <div
+      className={`flex items-center justify-center w-[7rem] h-[7rem] md:w-[12.5rem] md:h-[12.5rem] rounded-full ${
+        canPunchOut() && !punchLoading
+          ? "bg-[#E2E6EA] cursor-pointer hover:bg-gray-200 transition-colors"
+          : "bg-gray-300 cursor-not-allowed"
+      }`}
+    >
+      <div
+        onClick={canPunchOut() && !punchLoading ? handlePunchOut : undefined}
+        className="relative flex items-center justify-center w-[5.5rem] h-[5.5rem] md:w-[9.5rem] md:h-[9.5rem] shadow-lg rounded-full bg-gray-100"
+      >
+        <div className="absolute w-[4.5rem] h-[4.5rem] md:w-[8rem] md:h-[8rem] bg-gradient-to-r from-[#E4E7ED] to-[#FFFFFF] rounded-full flex flex-col items-center justify-center">
+          <Image
+            src="/icons/punchout.png"
+            alt="Punch Out"
+            width={32}
+            height={32}
+            className="w-6 h-8 md:w-8 md:h-12"
+          />
+          <p className="mt-1 text-[10px] md:text-xs font-semibold text-gray-800">
+            PUNCH OUT
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div className="bg-[#EEEEEE] mt-3 py-1.5 px-3 rounded-full">
+    <p className="text-gray-500 text-[10px] md:text-sm flex items-center justify-center">
+      <span className="w-2 h-2 bg-yellow-500 rounded-full mr-1 md:mr-2" />
+      {(() => {
+        let punchOutTime = null;
 
-                                if (todayRecord?.punches) {
-                                  const punchOutRecord = todayRecord.punches.find((punch: any) => punch.type === 'out');
-                                  if (punchOutRecord) {
-                                    punchOutTime = punchOutRecord.time;
-                                    return `Punch Out at ${format(new Date(punchOutTime), 'h:mm a')}`;
-                                  }
-                                } else if (todayRecord?.punchOut) {
-                                  punchOutTime = todayRecord.punchOut;
-                                  return `Punch Out at ${format(new Date(punchOutTime), 'h:mm a')}`;
-                                }
+        if (todayRecord?.punches) {
+          const punchOutRecord = todayRecord.punches.find((punch: any) => punch.type === 'out');
+          if (punchOutRecord) {
+            punchOutTime = punchOutRecord.time;
+            return `Punch Out at ${format(new Date(punchOutTime), 'h:mm a')}`;
+          }
+        } else if (todayRecord?.punchOut) {
+          punchOutTime = todayRecord.punchOut;
+          return `Punch Out at ${format(new Date(punchOutTime), 'h:mm a')}`;
+        }
 
-                                return canPunchOut() ? "Ready to Punch Out" : "Punch In First";
-                              })()}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+        return canPunchOut() ? "Ready to Punch Out" : "Punch In First";
+      })()}
+    </p>
+  </div>
+</div>
+    </div>
 
-                      {/* The stats section */}
+    {/* The stats section */}
                       <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                         <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-xl border border-blue-200 text-center">
                           <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -750,26 +758,23 @@ export default function EmployeeDashboard() {
                         </div>
                       </div>
 
-
-
-                      <div className="flex justify-center">
-                        <button
-                          onClick={() => setShowManualPunchModal(true)}
-                          className="flex items-center justify-center bg-purple-500 text-white hover:bg-purple-600 px-6 py-3 rounded-lg text-lg font-medium transition-colors duration-300 w-full max-w-md"
-                        >
-                          <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                              fillRule="evenodd"
-                              d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                          Add Manual Punch in/out
-                        </button>
-                      </div>
-
-                    </div>
-                  )}
+    <div className="flex justify-center">
+      <button
+        onClick={() => setShowManualPunchModal(true)}
+        className="flex items-center justify-center bg-purple-500 text-white hover:bg-purple-600 px-6 py-3 rounded-lg text-lg font-medium transition-colors duration-300 w-full max-w-md"
+      >
+        <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+            clipRule="evenodd"
+          />
+        </svg>
+        Add Manual Punch in/out
+      </button>
+    </div>
+  </div>
+)}
 
                   {activeTab === 'workReport' && (
                     <div className="p-6">
