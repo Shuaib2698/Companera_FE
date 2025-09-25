@@ -1,3 +1,4 @@
+// app/admin/requests/page.tsx
 'use client';
 
 import Layout from '@/app/components/Layout';
@@ -5,9 +6,10 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import StatusBadge from '@/app/components/StatusBadge';
 import RequestModal from '@/app/components/RequestModal';
+import RequestTypeModal from '@/app/components/RequestTypeModal';
 import Link from 'next/link';
 
-interface Request {
+interface PaymentRequest {
   _id: string;
   projectName: string;
   amount: number;
@@ -19,21 +21,68 @@ interface Request {
   purpose: string;
   documentUrl: string;
   employee?: { name: string };
+  type: 'payment';
 }
 
-export default function AdminPaymentRequests() {
+interface TripRequest {
+  _id: string;
+  tripPurpose: string;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  estimatedCost: number;
+  status: string;
+  createdAt: string;
+  description?: string;
+  employee?: { name: string };
+  type: 'trip';
+}
+
+interface AssetRequest {
+  _id: string;
+  requestType: string;
+  assetType: string;
+  preferredModel?: string;
+  quantity: number;
+  purpose: string;
+  estimatedCost?: number;
+  status: string;
+  createdAt: string;
+  employee?: { name: string };
+  type: 'asset';
+}
+
+type Request = PaymentRequest | TripRequest | AssetRequest;
+
+export default function AdminRequests() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [selected, setSelected] = useState<Request | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'all' | 'my'>('all');
+  const [tab, setTab] = useState<'payment' | 'trip' | 'asset'>('payment');
+  const [showTypeModal, setShowTypeModal] = useState(false);
 
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      const endpoint =
-        tab === 'all' ? '/payment-Request/all' : '/payment-Request/my-requests';
+      let endpoint = '';
+      switch (tab) {
+        case 'payment':
+          endpoint = '/payment-Request/all';
+          break;
+        case 'trip':
+          endpoint = '/trip-Request/all';
+          break;
+        case 'asset':
+          endpoint = '/asset-Request/all';
+          break;
+      }
+      
       const res = await api.get(endpoint);
-      setRequests(res.data);
+      const requestsWithType = res.data.map((request: any) => ({
+        ...request,
+        type: tab
+      }));
+      setRequests(requestsWithType);
     } catch (err) {
       console.error('Failed to fetch requests', err);
     } finally {
@@ -48,7 +97,20 @@ export default function AdminPaymentRequests() {
   const handleStatusChange = async (status: string) => {
     if (!selected) return;
     try {
-      await api.patch(`/payment-Request/${selected._id}/status`, { status });
+      let endpoint = '';
+      switch (selected.type) {
+        case 'payment':
+          endpoint = `/payment-Request/${selected._id}/status`;
+          break;
+        case 'trip':
+          endpoint = `/trip-Request/${selected._id}/status`;
+          break;
+        case 'asset':
+          endpoint = `/asset-Request/${selected._id}/status`;
+          break;
+      }
+      
+      await api.patch(endpoint, { status });
       setSelected(null);
       fetchRequests();
     } catch (err) {
@@ -56,10 +118,23 @@ export default function AdminPaymentRequests() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, type: string) => {
     if (confirm('Are you sure you want to delete this request?')) {
       try {
-        await api.delete(`/payment-Request/${id}`);
+        let endpoint = '';
+        switch (type) {
+          case 'payment':
+            endpoint = `/payment-Request/${id}`;
+            break;
+          case 'trip':
+            endpoint = `/trip-Request/${id}`;
+            break;
+          case 'asset':
+            endpoint = `/asset-Request/${id}`;
+            break;
+        }
+        
+        await api.delete(endpoint);
         fetchRequests();
       } catch (err) {
         console.error('Delete failed', err);
@@ -67,35 +142,68 @@ export default function AdminPaymentRequests() {
     }
   };
 
+  const getRequestDisplayData = (request: Request) => {
+    switch (request.type) {
+      case 'payment':
+        return {
+          title: request.projectName,
+          amount: `$${request.amount.toFixed(2)}`,
+          details: request.purpose
+        };
+      case 'trip':
+        return {
+          title: request.tripPurpose,
+          amount: `$${request.estimatedCost.toFixed(2)}`,
+          details: request.destination
+        };
+      case 'asset':
+        return {
+          title: request.assetType,
+          amount: request.estimatedCost ? `$${request.estimatedCost.toFixed(2)}` : 'N/A',
+          details: request.requestType
+        };
+      default:
+        return { title: '', amount: '', details: '' };
+    }
+  };
+
   return (
     <Layout allowedRoles={['admin']}>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Payment Requests</h1>
-        <Link
-          href="/admin/payment-Request/create"
+        <h1 className="text-2xl font-bold">All Requests</h1>
+        <button
+          onClick={() => setShowTypeModal(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
           New Request
-        </Link>
+        </button>
       </div>
 
       {/* Sub-navigation tabs */}
       <div className="mb-6 flex space-x-4 border-b pb-2">
         <button
           className={`text-sm font-medium ${
-            tab === 'all' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
+            tab === 'payment' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
           }`}
-          onClick={() => setTab('all')}
+          onClick={() => setTab('payment')}
         >
-          All Payment Requests
+          Payment Requests
         </button>
         <button
           className={`text-sm font-medium ${
-            tab === 'my' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
+            tab === 'trip' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
           }`}
-          onClick={() => setTab('my')}
+          onClick={() => setTab('trip')}
         >
-          My Payment Requests
+          Trip Requests
+        </button>
+        <button
+          className={`text-sm font-medium ${
+            tab === 'asset' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
+          }`}
+          onClick={() => setTab('asset')}
+        >
+          Asset Requests
         </button>
       </div>
 
@@ -106,42 +214,45 @@ export default function AdminPaymentRequests() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Project</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  {tab === 'payment' ? 'Project' : tab === 'trip' ? 'Purpose' : 'Asset Type'}
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                {tab === 'all' && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
-                )}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
                 <th></th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {requests.map((r) => (
-                <tr key={r._id}>
-                  <td className="px-6 py-4">{r.projectName}</td>
-                  <td className="px-6 py-4">${r.amount.toFixed(2)}</td>
-                  <td className="px-6 py-4"><StatusBadge status={r.status} /></td>
-                  {tab === 'all' && (
-                    <td className="px-6 py-4">{r.employee?.name || 'N/A'}</td>
-                  )}
-                  <td className="px-6 py-4">{new Date(r.createdAt).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button
-                      onClick={() => setSelected(r)}
-                      className="text-blue-600 hover:underline"
-                    >
-                      View Details
-                    </button>
-                    <button
-                      onClick={() => handleDelete(r._id)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {requests.map((request) => {
+                const displayData = getRequestDisplayData(request);
+                return (
+                  <tr key={request._id}>
+                    <td className="px-6 py-4">{displayData.title}</td>
+                    <td className="px-6 py-4">{displayData.amount}</td>
+                    <td className="px-6 py-4"><StatusBadge status={request.status} /></td>
+                    <td className="px-6 py-4">{request.employee?.name || 'N/A'}</td>
+                    <td className="px-6 py-4">{new Date(request.createdAt).toLocaleDateString()}</td>
+                    <td className="px-6 py-4">{displayData.details}</td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <button
+                        onClick={() => setSelected(request)}
+                        className="text-blue-600 hover:underline"
+                      >
+                        View Details
+                      </button>
+                      <button
+                        onClick={() => handleDelete(request._id, request.type)}
+                        className="text-red-600 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -151,10 +262,16 @@ export default function AdminPaymentRequests() {
         <RequestModal
           request={selected}
           onClose={() => setSelected(null)}
-          onStatusChange={tab === 'all' ? handleStatusChange : undefined}
-          isAdmin={tab === 'all'}
+          onStatusChange={handleStatusChange}
+          isAdmin={true}
         />
       )}
+
+      <RequestTypeModal
+        isOpen={showTypeModal}
+        onClose={() => setShowTypeModal(false)}
+        userRole="admin"
+      />
     </Layout>
   );
 }

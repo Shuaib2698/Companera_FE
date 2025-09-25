@@ -473,6 +473,7 @@ export default function EmployeeDashboard() {
   });
 
   // Replace the useEffect that fetches stats with this:
+// Replace the useEffect that fetches stats with this:
 useEffect(() => {
   const fetchStats = async () => {
     try {
@@ -488,22 +489,59 @@ useEffect(() => {
         record.punches && record.punches.length > 0
       ).length;
 
-      // Fetch holidays to calculate upcoming holidays
+      // Fetch holidays for the current month
       const holidaysRes = await api.get('/holidays');
-      const currentDateObj = new Date();
-      const upcomingHolidays = holidaysRes.data.filter((holiday: any) =>
-        new Date(holiday.date) > currentDateObj
-      ).length;
+      const currentMonthHolidays = holidaysRes.data.filter((holiday: any) => {
+        const holidayDate = new Date(holiday.date);
+        return holidayDate.getMonth() === currentDate.getMonth() && 
+               holidayDate.getFullYear() === currentDate.getFullYear();
+      });
+
+      // Calculate working days for current month (excluding weekends and holidays)
+      const getWorkingDays = (year: number, month: number) => {
+        const firstDay = new Date(year, month - 1, 1);
+        const lastDay = new Date(year, month, 0);
+        let workingDays = 0;
+        
+        for (let day = new Date(firstDay); day <= lastDay; day.setDate(day.getDate() + 1)) {
+          const dayOfWeek = day.getDay();
+          // Exclude weekends (Saturday = 6, Sunday = 0)
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            workingDays++;
+          }
+        }
+
+        // Subtract holidays that fall on weekdays
+        const weekdayHolidays = currentMonthHolidays.filter((holiday: any) => {
+          const holidayDate = new Date(holiday.date);
+          const dayOfWeek = holidayDate.getDay();
+          return dayOfWeek !== 0 && dayOfWeek !== 6; // Only count holidays on weekdays
+        });
+
+        return workingDays - weekdayHolidays.length;
+      };
+
+      const workingDaysCount = getWorkingDays(year, month);
+      
+      // Calculate upcoming holidays for current month (from today onwards)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const upcomingHolidays = currentMonthHolidays.filter((holiday: any) => {
+        const holidayDate = new Date(holiday.date);
+        holidayDate.setHours(0, 0, 0, 0);
+        return holidayDate >= today;
+      }).length;
 
       setStats({
-        workingDays: statsRes.data.workingDays || 0,
+        workingDays: workingDaysCount, // This will now show correct working days
         absentDays: statsRes.data.absentDays || 0,
         approvedLeaves: statsRes.data.approvedLeaves || 0,
-        holidays: statsRes.data.holidays || 0,
+        holidays: currentMonthHolidays.length,
         pendingLeaves: pendingLeaves,
         upcomingLeaves: statsRes.data.upcomingLeaves || 0,
         workedDays: workedDays,
-        upcomingHolidays: upcomingHolidays
+        upcomingHolidays: upcomingHolidays // This will now show current month's upcoming holidays
       });
     } catch (err: any) {
       console.error('Error fetching stats:', err);
@@ -514,6 +552,18 @@ useEffect(() => {
     fetchStats();
   }
 }, [loading, pendingLeaves]);
+
+const fetchUserData = async () => {
+  try {
+    const userRes = await api.get('/auth/me'); // Adjust endpoint as needed
+    setUser(userRes.data);
+  } catch (err: any) {
+    console.error('Error fetching user data:', err);
+  }
+};
+
+// Call it in your main useEffect
+fetchUserData();
 
   return (
     <Layout allowedRoles={['employee']}>
@@ -527,7 +577,8 @@ useEffect(() => {
                 <p className="text-gray-600 mt-1">Welcome to your workspace</p>
               </div>
               <div className="mt-4 md:mt-0 text-right">
-                <h2 className="text-xl font-semibold text-gray-800">Good to see you, User!</h2>
+                <h2 className="text-xl font-semibold text-gray-800">Good to see you, {user?.name || 'User'}!</h2>
+
                 <p className="text-sm text-gray-500">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
               </div>
             </div>
