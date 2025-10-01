@@ -1,3 +1,4 @@
+// app/admin/Request/payment-request/page.tsx
 'use client';
 
 import Layout from '@/app/components/Layout';
@@ -24,12 +25,19 @@ export default function CreatePaymentRequest() {
     setLoading(true);
     setError('');
 
+    // Client-side validation for 1 lakh limit
+    if (parseFloat(form.amount) > 100000) {
+      setError('Payment amount cannot exceed ₹1,00,000');
+      setLoading(false);
+      return;
+    }
+
     try {
       await api.post('/payment-Request', {
         ...form,
         amount: parseFloat(form.amount)
       });
-      router.push('/employee/payment-Request');
+      router.push('/admin/Request');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create request');
     } finally {
@@ -84,10 +92,11 @@ export default function CreatePaymentRequest() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (Max: ₹1,00,000)</label>
               <input
                 type="number"
                 min="0"
+                max="100000"
                 step="0.01"
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -111,10 +120,10 @@ export default function CreatePaymentRequest() {
               <label className="block text-sm font-medium text-gray-700 mb-1">Document URL</label>
               <input
                 type="url"
-                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 value={form.documentUrl}
                 onChange={(e) => setForm({...form, documentUrl: e.target.value})}
+                placeholder="Optional"
               />
             </div>
           </div>
@@ -132,7 +141,7 @@ export default function CreatePaymentRequest() {
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => router.push('/employee/payment-Request')}
+              onClick={() => router.push('/admin/Request')}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50"
             >
               Cancel

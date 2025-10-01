@@ -16,7 +16,7 @@ export default function Sidebar() {
     { href: '/employee/dashboard', text: 'Dashboard' },
     { href: '/employee/holidays', text: 'Holidays' }, // Added Holidays for employees
     { href: '/employee/announcement', text: 'Announcements' },
-    { href: '/employee/payment-Request', text: 'Requests' },
+    { href: '/employee/Request', text: 'Requests' },
   ];
 
   const adminLinks = [
@@ -24,7 +24,7 @@ export default function Sidebar() {
     { href: '/admin/leaves', text: 'Leaves & WFH' },
     { href: '/admin/holidays', text: 'Holidays' }, // Added Holidays for admins
     { href: '/admin/announcement', text: 'Announcements' },
-    { href: '/admin/payment-Request', text: 'Requests' },
+    { href: '/admin/Request', text: 'Requests' },
     { href: '/admin/employees', text: 'Employees' },
   ];
 

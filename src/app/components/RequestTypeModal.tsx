@@ -20,21 +20,21 @@ export default function RequestTypeModal({ isOpen, onClose, userRole }: RequestT
       name: 'Payment Request',
       description: 'Request for payments like salary advance, project advance, etc.',
       icon: '💰',
-      path: userRole === 'admin' ? '/admin/payment-Request/create' : '/employee/payment-Request/create'
+      path: userRole === 'admin' ? '/admin/Request/payment-request' : '/employee/Request/payment-request'
     },
     {
       id: 'trip',
       name: 'Trip Request',
       description: 'Request for business trips and travel arrangements',
       icon: '✈️',
-      path: userRole === 'admin' ? '/admin/trip-Request/create' : '/employee/trip-Request/create'
+      path: userRole === 'admin' ? '/admin/Request/trip-request' : '/employee/Request/trip-request'
     },
     {
       id: 'asset',
       name: 'Asset Request',
       description: 'Request for assets, repairs, or reimbursements',
       icon: '💻',
-      path: userRole === 'admin' ? '/admin/asset-Request/create' : '/employee/asset-Request/create'
+      path: userRole === 'admin' ? '/admin/Request/asset-request' : '/employee/Request/asset-request'
     }
   ];
 

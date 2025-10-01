@@ -1,4 +1,4 @@
-// app/employee/requests/page.tsx
+// app/admin/Request/my/page.tsx
 'use client';
 
 import Layout from '@/app/components/Layout';
@@ -51,7 +51,7 @@ interface AssetRequest {
 
 type Request = PaymentRequest | TripRequest | AssetRequest;
 
-export default function EmployeeRequests() {
+export default function AdminMyRequests() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [selected, setSelected] = useState<Request | null>(null);
   const [loading, setLoading] = useState(true);
@@ -61,21 +61,20 @@ export default function EmployeeRequests() {
   const fetchRequests = async () => {
     setLoading(true);
     try {
-      let endpoint = '';
+      let response;
       switch (tab) {
         case 'payment':
-          endpoint = '/payment-Request/my-requests';
+          response = await api.get('/payment-Request/my-requests');
           break;
         case 'trip':
-          endpoint = '/trip-Request/my-requests';
+          response = await api.get('/trip-requests/my-requests');
           break;
         case 'asset':
-          endpoint = '/asset-Request/my-requests';
+          response = await api.get('/asset-requests/my-requests');
           break;
       }
       
-      const res = await api.get(endpoint);
-      const requestsWithType = res.data.map((request: any) => ({
+      const requestsWithType = response.data.map((request: any) => ({
         ...request,
         type: tab
       }));
@@ -91,25 +90,49 @@ export default function EmployeeRequests() {
     fetchRequests();
   }, [tab]);
 
+  const handleDelete = async (id: string, type: string) => {
+    if (confirm('Are you sure you want to delete this request?')) {
+      try {
+        let endpoint = '';
+        switch (type) {
+          case 'payment':
+            endpoint = `/payment-Request/${id}`;
+            break;
+          case 'trip':
+            endpoint = `/trip-requests/${id}`;
+            break;
+          case 'asset':
+            endpoint = `/asset-requests/${id}`;
+            break;
+        }
+        
+        await api.delete(endpoint);
+        fetchRequests();
+      } catch (err) {
+        console.error('Delete failed', err);
+      }
+    }
+  };
+
   const getRequestDisplayData = (request: Request) => {
     switch (request.type) {
       case 'payment':
         return {
           title: request.projectName,
           amount: `$${request.amount.toFixed(2)}`,
-          details: request.purpose
+          details: request.purpose,
         };
       case 'trip':
         return {
           title: request.tripPurpose,
           amount: `$${request.estimatedCost.toFixed(2)}`,
-          details: request.destination
+          details: request.destination,
         };
       case 'asset':
         return {
           title: request.assetType,
           amount: request.estimatedCost ? `$${request.estimatedCost.toFixed(2)}` : 'N/A',
-          details: request.requestType
+          details: request.requestType,
         };
       default:
         return { title: '', amount: '', details: '' };
@@ -117,9 +140,27 @@ export default function EmployeeRequests() {
   };
 
   return (
-    <Layout allowedRoles={['employee']}>
+    <Layout allowedRoles={['admin']}>
+      {/* Main Navigation Bar */}
+      <div className="mb-6">
+        <div className="flex space-x-8 border-b">
+          <Link
+            href="/admin/Request"
+            className="pb-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          >
+            Incoming Requests
+          </Link>
+          <Link
+            href="/admin/Request/my"
+            className="pb-4 px-1 border-b-2 font-medium text-sm border-blue-500 text-blue-600"
+          >
+            My Requests
+          </Link>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Requests</h1>
+        <h1 className="text-2xl font-bold">My Submitted Requests</h1>
         <button
           onClick={() => setShowTypeModal(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -131,24 +172,30 @@ export default function EmployeeRequests() {
       {/* Sub-navigation tabs */}
       <div className="mb-6 flex space-x-4 border-b pb-2">
         <button
-          className={`text-sm font-medium ${
-            tab === 'payment' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
+          className={`px-4 py-2 text-sm font-medium rounded-t ${
+            tab === 'payment' 
+              ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' 
+              : 'text-gray-600 hover:text-gray-900'
           }`}
           onClick={() => setTab('payment')}
         >
           Payment Requests
         </button>
         <button
-          className={`text-sm font-medium ${
-            tab === 'trip' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
+          className={`px-4 py-2 text-sm font-medium rounded-t ${
+            tab === 'trip' 
+              ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' 
+              : 'text-gray-600 hover:text-gray-900'
           }`}
           onClick={() => setTab('trip')}
         >
           Trip Requests
         </button>
         <button
-          className={`text-sm font-medium ${
-            tab === 'asset' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'
+          className={`px-4 py-2 text-sm font-medium rounded-t ${
+            tab === 'asset' 
+              ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' 
+              : 'text-gray-600 hover:text-gray-900'
           }`}
           onClick={() => setTab('asset')}
         >
@@ -157,7 +204,9 @@ export default function EmployeeRequests() {
       </div>
 
       {loading ? (
-        <p>Loading...</p>
+        <div className="flex justify-center items-center min-h-64">
+          <div className="text-lg">Loading...</div>
+        </div>
       ) : (
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <table className="min-w-full divide-y divide-gray-200">
@@ -170,25 +219,35 @@ export default function EmployeeRequests() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
-                <th></th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {requests.map((request) => {
                 const displayData = getRequestDisplayData(request);
                 return (
-                  <tr key={request._id}>
-                    <td className="px-6 py-4">{displayData.title}</td>
-                    <td className="px-6 py-4">{displayData.amount}</td>
-                    <td className="px-6 py-4"><StatusBadge status={request.status} /></td>
-                    <td className="px-6 py-4">{new Date(request.createdAt).toLocaleDateString()}</td>
+                  <tr key={request._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">{displayData.title}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{displayData.amount}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StatusBadge status={request.status} />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {new Date(request.createdAt).toLocaleDateString()}
+                    </td>
                     <td className="px-6 py-4">{displayData.details}</td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
                       <button
                         onClick={() => setSelected(request)}
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 hover:text-blue-900 text-sm font-medium"
                       >
-                        View Details
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleDelete(request._id, request.type)}
+                        className="text-red-600 hover:text-red-900 text-sm font-medium"
+                      >
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -196,6 +255,15 @@ export default function EmployeeRequests() {
               })}
             </tbody>
           </table>
+
+          {requests.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-gray-500 text-lg mb-2">No {tab} requests found</div>
+              <div className="text-sm text-gray-400">
+                You haven't submitted any {tab} requests yet.
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -210,7 +278,7 @@ export default function EmployeeRequests() {
       <RequestTypeModal
         isOpen={showTypeModal}
         onClose={() => setShowTypeModal(false)}
-        userRole="employee"
+        userRole="admin"
       />
     </Layout>
   );
